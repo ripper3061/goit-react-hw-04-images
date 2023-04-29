@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import { Searchbar } from './Searchbar/Searchbar';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 import { Button } from './Button/Button';
@@ -6,112 +6,80 @@ import { Loader } from './Loader/Loader';
 import { AppLayout, ErrorMessage } from './App.styled';
 import { getImagesByName } from 'services/api';
 
-export class App extends Component {
-  state = {
-    images: [],
-    searchQuery: '',
-    firstSearch: '',
-    page: null,
-    isLoading: false,
-    isLoadMoreShown: false,
-    error: '',
-  };
+export default function App() {
+  const [images, setImages] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [firstSearch, setFirstSearch] = useState('');
+  const [page, setPage] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [loadMoreShown, setLoadMoreShown] = useState(false);
+  const [error, setError] = useState('');
 
-  componentDidMount() {
-    if (this.state.isLoading) {
-      this.fetchImages();
+  useEffect(() => {
+    const fetchImages = async () => {
+      setLoading(true);
+      try {
+        const fetchedImages = await getImagesByName(searchQuery, page);
+
+        setImages([...images, ...fetchedImages.hits]);
+        setLoadMoreShown(images.length < fetchedImages.totalHits);
+
+        if (fetchedImages.totalHits === 0) {
+          setError('Sorry, there are no images matching your search query.');
+        }
+      } catch {
+        setError('Ops, failed to load. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (loading) {
+      fetchImages();
     }
-  }
+  }, [searchQuery, page]);
 
-  componentDidUpdate() {
-    if (this.state.isLoading) {
-      this.fetchImages();
-    }
-  }
-
-  fetchImages = async () => {
-    const { searchQuery, page } = this.state;
-
-    try {
-      const fetchedImages = await getImagesByName(searchQuery, page);
-      const images = [...this.state.images, ...fetchedImages.hits];
-      this.setState({
-        images: images,
-        isLoadMoreShown: images.length < fetchedImages.totalHits,
-        error:
-          images.length === 0
-            ? 'Sorry, there are no images matching your search query.'
-            : '',
-      });
-    } catch {
-      this.setState({
-        error: 'Ops, failed to load. Please try again.',
-      });
-    } finally {
-      this.setState({ isLoading: false });
-    }
-  };
-
-  handleSubmit = (inputValue, event) => {
-    const { firstSearch, searchQuery } = this.state;
-
+  const handleSubmit = (inputValue, event) => {
     event.preventDefault();
 
     if (!inputValue.trim()) {
-      return this.setState({
-        error: 'Enter your query to search',
-      });
+      return setError('Enter your query to search');
     }
 
     if (!firstSearch) {
-      this.setState({
-        firstSearch: inputValue,
-      });
+      setFirstSearch(inputValue);
     }
 
     if (firstSearch === searchQuery) {
       return alert('You already see the results on request');
     }
 
-    this.setState({
-      images: [],
-      page: 1,
-      isLoading: true,
-    });
+    setImages([]);
+    setPage(1);
+    setLoading(true);
   };
 
-  handleChange = event => {
-    this.setState({
-      searchQuery: event.currentTarget.value,
-      firstSearch: '',
-    });
+  const handleChange = event => {
+    setSearchQuery(event.currentTarget.value);
+    setFirstSearch('');
   };
 
-  handleClickOnLoadBtn = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-      isLoading: true,
-    }));
+  const handleClickOnLoadBtn = () => {
+    setPage(prevPage => prevPage + 1);
+    setLoading(true);
   };
 
-  render() {
-    const { isLoading, images, error, isLoadMoreShown, searchQuery } =
-      this.state;
-
-    return (
-      <AppLayout>
-        <Searchbar
-          onSubmit={this.handleSubmit}
-          inputValue={searchQuery}
-          onChange={this.handleChange}
-        />
-        <Loader isLoading={isLoading} />
-        {images.length > 0 && <ImageGallery images={images} />}
-        {error && <ErrorMessage>{error}</ErrorMessage>}
-        {!isLoading && isLoadMoreShown && (
-          <Button onClick={this.handleClickOnLoadBtn} />
-        )}
-      </AppLayout>
-    );
-  }
+  return (
+    <AppLayout>
+      <Searchbar
+        onSubmit={handleSubmit}
+        inputValue={searchQuery}
+        onChange={handleChange}
+      />
+      <Loader loading={loading} />
+      {images.length > 0 && <ImageGallery images={images} />}
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {!loading && loadMoreShown && <Button onClick={handleClickOnLoadBtn} />}
+    </AppLayout>
+  );
 }
