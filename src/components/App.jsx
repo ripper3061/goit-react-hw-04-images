@@ -20,7 +20,7 @@ export default function App() {
       try {
         const fetchedImages = await getImagesByName(searchQuery, page);
 
-        setImages([...images, ...fetchedImages.hits]);
+        setImages(prevImages => [...prevImages, ...fetchedImages.hits]);
         setLoadMoreShown(images.length < fetchedImages.totalHits);
 
         if (fetchedImages.totalHits === 0) {
