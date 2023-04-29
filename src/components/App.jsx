@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Searchbar } from './Searchbar/Searchbar';
+import Searchbar from './Searchbar/Searchbar';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 import { Button } from './Button/Button';
 import { Loader } from './Loader/Loader';
@@ -9,7 +9,6 @@ import { getImagesByName } from 'services/api';
 export default function App() {
   const [images, setImages] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [firstSearch, setFirstSearch] = useState('');
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadMoreShown, setLoadMoreShown] = useState(false);
@@ -39,29 +38,22 @@ export default function App() {
     }
   }, [searchQuery, page]);
 
-  const handleSubmit = (inputValue, event) => {
-    event.preventDefault();
-
-    if (!inputValue.trim()) {
+  const handleSubmit = inputValue => {
+    if (!inputValue) {
       return setError('Enter your query to search');
     }
 
-    if (!firstSearch) {
-      setFirstSearch(inputValue);
-    }
-
-    if (firstSearch === searchQuery) {
+    if (inputValue === searchQuery) {
       return alert('You already see the results on request');
     }
 
-    setImages([]);
-    setPage(1);
-    setLoading(true);
-  };
-
-  const handleChange = event => {
-    setSearchQuery(event.currentTarget.value);
-    setFirstSearch('');
+    if (inputValue !== searchQuery) {
+      setSearchQuery(inputValue);
+      setImages([]);
+      setPage(1);
+      setError('');
+      setLoading(true);
+    }
   };
 
   const handleClickOnLoadBtn = () => {
@@ -71,11 +63,7 @@ export default function App() {
 
   return (
     <AppLayout>
-      <Searchbar
-        onSubmit={handleSubmit}
-        inputValue={searchQuery}
-        onChange={handleChange}
-      />
+      <Searchbar onSubmit={handleSubmit} />
       <Loader loading={loading} />
       {images.length > 0 && <ImageGallery images={images} />}
       {error && <ErrorMessage>{error}</ErrorMessage>}
